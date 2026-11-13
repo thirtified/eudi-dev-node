@@ -58,6 +58,6 @@ jobs:
           - [ ] Add new options and result fields to the types
           - [ ] \`pnpm run test:integration\`
           - [ ] Bump the package version, update CHANGELOG.md, tag and push
-          - [ ] After the release, \`pnpm install\` and commit \`pnpm-lock.yaml\`
+          - [ ] After the release, \`pnpm update '@thirtified/eudi-dev-*'\` and commit \`pnpm-lock.yaml\`
           EOF
           )"
