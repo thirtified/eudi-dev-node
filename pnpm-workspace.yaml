@@ -1,0 +1,7 @@
+# esbuild (via tsx) finds its binary through optional dependencies, so its
+# install script isn't needed.
+allowBuilds:
+  esbuild: false
+
+# Don't resolve versions published less than a day ago (minutes).
+minimumReleaseAge: 1440

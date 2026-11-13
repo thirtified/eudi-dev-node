@@ -1,0 +1,77 @@
+{
+  "name": "@thirtified/eudi-dev",
+  "version": "0.1.0",
+  "description": "Typed Node.js wrapper for the eudi-dev CLI (decode, validate, dcql, issue, trust, registrar)",
+  "keywords": [
+    "eudi",
+    "eudi-wallet",
+    "sd-jwt",
+    "mdoc",
+    "openid4vp",
+    "openid4vci",
+    "testing"
+  ],
+  "license": "Apache-2.0",
+  "author": "Julian Dreissig",
+  "homepage": "https://github.com/thirtified/eudi-dev-node#readme",
+  "bugs": {
+    "url": "https://github.com/thirtified/eudi-dev-node/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thirtified/eudi-dev-node.git"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.18.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test \"test/unit/**/*.test.ts\"",
+    "test:integration": "node --import tsx --test --test-concurrency=1 \"test/integration/**/*.test.ts\"",
+    "prepack": "pnpm run build",
+    "build:platform": "node scripts/build-platform-packages.mjs",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "lint:package": "pnpm run build && publint && attw --pack . --profile esm-only"
+  },
+  "optionalDependencies": {
+    "@thirtified/eudi-dev-darwin-arm64": "3.10.1",
+    "@thirtified/eudi-dev-darwin-x64": "3.10.1",
+    "@thirtified/eudi-dev-linux-arm64": "3.10.1",
+    "@thirtified/eudi-dev-linux-x64": "3.10.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.6.7",
+    "@types/node": "^22.0.0",
+    "publint": "0.3.25",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
+  }
+}

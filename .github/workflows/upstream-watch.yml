@@ -1,0 +1,63 @@
+name: Upstream watch
+
+# Opens an issue when eudi-dev publishes a release newer than the one pinned in
+# src/version.ts. The bump itself stays manual: the platform packages for the
+# new version have to be published before the main package can pin them.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # list and open the "Upstream eudi-dev <tag> released" issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare with the latest upstream release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pinned=$(sed -n "s/.*EUDI_DEV_VERSION = '\(v[^']*\)'.*/\1/p" src/version.ts)
+          latest=$(gh api repos/eudi-dev/eudi-dev/releases/latest --jq .tag_name)
+          echo "pinned $pinned, latest $latest"
+          if [ -z "$pinned" ] || [ -z "$latest" ]; then
+            echo "::error::Could not read the pinned or the latest version"
+            exit 1
+          fi
+          if [ "$pinned" = "$latest" ]; then
+            echo "Up to date"
+            exit 0
+          fi
+
+          title="Upstream eudi-dev $latest released"
+          # Any state: a closed issue means the release was looked at already.
+          found=$(gh issue list --state all --search "\"$title\" in:title" --json title \
+            --jq "map(select(.title == \"$title\")) | length")
+          if [ "$found" != "0" ]; then
+            echo "Issue \"$title\" exists already"
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$(cat <<EOF
+          eudi-dev [$latest](https://github.com/eudi-dev/eudi-dev/releases/tag/$latest) is out. This package pins $pinned.
+
+          - [ ] Read the upstream CHANGELOG for new flags and \`--json\` fields
+          - [ ] Bump \`EUDI_DEV_VERSION\` in \`src/version.ts\`
+          - [ ] \`node scripts/build-platform-packages.mjs --only current --out node_modules/@thirtified --sync-main\`
+          - [ ] Add new options and result fields to the types
+          - [ ] \`pnpm run test:integration\`
+          - [ ] Bump the package version, update CHANGELOG.md, tag and push
+          - [ ] After the release, \`pnpm install\` and commit \`pnpm-lock.yaml\`
+          EOF
+          )"

@@ -1,0 +1,133 @@
+name: Release
+
+# Push a tag v<version of package.json> to publish everything, or run it by
+# hand. The platform packages are published first, because the main package
+# pins them in optionalDependencies. Versions that already exist on npm are
+# skipped, so a rerun is safe.
+#
+# Both publish jobs run in the "npm" environment, which needs a reviewer's
+# approval and holds the NPM_TOKEN secret.
+#
+# Auth: the NPM_TOKEN secret, or npm trusted publishing (configure it per
+# package on npmjs.com after the first publish, naming this workflow and the
+# "npm" environment, then the secret can go).
+#
+# pnpm installs and builds; npm publishes, because npm's CLI is what
+# provenance and trusted publishing are specified against. The main package
+# has no workspace: dependencies, so npm can publish it as is.
+#
+# No dependency cache here: a release shouldn't restore a cache that a PR
+# build could have written.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      main:
+        description: Also publish the main package (@thirtified/eudi-dev)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  platform-packages:
+    runs-on: ubuntu-latest
+    # Waits for approval by a reviewer of the "npm" environment.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm provenance / trusted publishing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      # The version comes from the main package's optionalDependencies, so a
+      # repackaging release (3.10.1-1) only needs "--sync-main" locally.
+      # --verify-main fails unless all four pins agree.
+      - name: Build platform packages
+        run: |
+          version=$(node -p "require('./package.json').optionalDependencies['@thirtified/eudi-dev-linux-x64']")
+          node scripts/build-platform-packages.mjs --package-version "$version" --verify-main
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in npm/*/; do
+            name=$(node -p "require('./${dir}package.json').name")
+            version=$(node -p "require('./${dir}package.json').version")
+            if [ "$(npm view "$name@$version" version 2>/dev/null)" = "$version" ]; then
+              echo "$name@$version is already published, skipping"
+              continue
+            fi
+            # --tag latest: a repackaging version like 3.10.1-1 is a semver
+            # prerelease, which npm refuses to publish without a tag.
+            npm publish "$dir" --provenance --access public --tag latest
+          done
+
+  main-package:
+    needs: platform-packages
+    if: github.event_name == 'push' || inputs.main
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm provenance / trusted publishing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Check tag and repository
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version $version"
+            exit 1
+          fi
+          if [ "$(node -p "Boolean(require('./package.json').repository)")" != "true" ]; then
+            echo "::error::package.json needs a repository field for npm provenance"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm test
+
+      - name: Publish @thirtified/eudi-dev
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if [ "$(npm view "$name@$version" version 2>/dev/null)" = "$version" ]; then
+            echo "$name@$version is already published, skipping"
+            exit 0
+          fi
+          tag=latest
+          case "$version" in *-*) tag=next ;; esac
+          # prepack runs "pnpm run build". publishConfig sets access and provenance.
+          npm publish --tag "$tag"
