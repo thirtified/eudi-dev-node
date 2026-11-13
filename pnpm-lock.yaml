@@ -184,6 +184,19 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+    optionalDependencies:
+      '@thirtified/eudi-dev-darwin-arm64':
+        specifier: 3.10.1
+        version: 3.10.1
+      '@thirtified/eudi-dev-darwin-x64':
+        specifier: 3.10.1
+        version: 3.10.1
+      '@thirtified/eudi-dev-linux-arm64':
+        specifier: 3.10.1
+        version: 3.10.1
+      '@thirtified/eudi-dev-linux-x64':
+        specifier: 3.10.1
+        version: 3.10.1
 
 packages:
 
@@ -441,6 +454,26 @@ packages:
   '@sindresorhus/is@4.6.0':
     resolution: {integrity: sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==}
     engines: {node: '>=10'}
+
+  '@thirtified/eudi-dev-darwin-arm64@3.10.1':
+    resolution: {integrity: sha512-yKqK7EAr0SQQJhFXtRGCbOLHok1uJ6tAV8nda8QJZVtgZdo6sCNxg2sfKwzqB9tquiw7FOCiQuQHXaML5OxEeA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@thirtified/eudi-dev-darwin-x64@3.10.1':
+    resolution: {integrity: sha512-1D1rMkjd70lZwocSAdo/Jsq0kt+jiBg3zSHiC2pv2k0D5n7KhHQJhXDSd+llb9QQ96PR5nmFsmxVNSdj7+8kWQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@thirtified/eudi-dev-linux-arm64@3.10.1':
+    resolution: {integrity: sha512-+LwTSpfodk9Nxu5q/PCjK/u2+HNjl1q6kSEWuPoNWwulG3KDeXEk7HGQJZc5IfZAkXSUeif33cqcIacZ+r8iGQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@thirtified/eudi-dev-linux-x64@3.10.1':
+    resolution: {integrity: sha512-Ffqfc3LrHGregWiMEI3deGsCe0aQK/g5NBHUsuS22yU0ObTynnl7TD+wxugLJfnuO2mk0HBa5TL4+orK4qeL+Q==}
+    cpu: [x64]
+    os: [linux]
 
   '@types/node@22.20.5':
     resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
@@ -840,6 +873,18 @@ snapshots:
       tinyexec: 1.3.1
 
   '@sindresorhus/is@4.6.0': {}
+
+  '@thirtified/eudi-dev-darwin-arm64@3.10.1':
+    optional: true
+
+  '@thirtified/eudi-dev-darwin-x64@3.10.1':
+    optional: true
+
+  '@thirtified/eudi-dev-linux-arm64@3.10.1':
+    optional: true
+
+  '@thirtified/eudi-dev-linux-x64@3.10.1':
+    optional: true
 
   '@types/node@22.20.5':
     dependencies:

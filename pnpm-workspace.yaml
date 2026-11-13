@@ -5,3 +5,8 @@ allowBuilds:
 
 # Don't resolve versions published less than a day ago (minutes).
 minimumReleaseAge: 1440
+
+# Our own platform packages are pinned right after we publish them, so they
+# would otherwise block every lockfile refresh for a day after a release.
+minimumReleaseAgeExclude:
+  - '@thirtified/eudi-dev-*'

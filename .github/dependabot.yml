@@ -15,6 +15,11 @@ updates:
       # Bumped only together with src/version.ts, after the platform packages
       # for the new upstream release are published (see upstream-watch.yml).
       - dependency-name: '@thirtified/eudi-dev-*'
+      # Keep the types at the oldest supported Node major (engines: >=22), so
+      # the compiler rejects APIs that Node 22 doesn't have. Raise it together
+      # with engines.node.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /

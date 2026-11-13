@@ -184,7 +184,7 @@ It downloads the release's `checksums.txt` and the four assets, fails on any SHA
 
 Nothing goes live without that 2FA approval. Both jobs run in the `npm` GitHub environment, which holds `NPM_TOKEN`: a granular token limited to staging. You can later replace it with npm trusted publishing, allowing only staging: `npm trust github <pkg> --repo thirtified/eudi-dev-node --file release.yml --env npm --allow-stage-publish`. `package.json` needs a `repository` field that matches the GitHub repo, for provenance. The platform packages take theirs from it, falling back to `$GITHUB_REPOSITORY`.
 
-The repo uses pnpm (the version is pinned in `packageManager`) for installing, building and testing. Publishing uses the npm CLI (`npm stage publish`), because provenance, staging and trusted publishing are defined for it. pnpm skips an optional dependency it can't fetch, so `pnpm install --frozen-lockfile` passes even while a platform package isn't on npm yet. After the platform packages are published, run `pnpm install` and commit the updated `pnpm-lock.yaml`.
+The repo uses pnpm (the version is pinned in `packageManager`) for installing, building and testing. Publishing uses the npm CLI (`npm stage publish`), because provenance, staging and trusted publishing are defined for it. pnpm skips an optional dependency it can't fetch, so `pnpm install --frozen-lockfile` passes even while a platform package isn't on npm yet. After the platform packages are published, run `pnpm update '@thirtified/eudi-dev-*'` and commit the updated `pnpm-lock.yaml`. A plain `pnpm install` isn't enough: it treats the skipped packages as resolved and leaves them out. `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` exempts these packages from the one-day wait, so this works right after a release.
 
 The unit tests use `test/fixtures/fake-eudi.mjs`, which follows the same JSON contract and logs each call, so the tests can check argument building, temp files, stdin and the environment. The fake binary is a shebang script, so the tests need macOS or Linux.
 
@@ -209,7 +209,7 @@ The [upstream watch](.github/workflows/upstream-watch.yml) workflow opens an iss
 2. Run `node scripts/build-platform-packages.mjs --only current --out node_modules/@thirtified --sync-main`. This pins the new version in `optionalDependencies` and installs your platform's package locally.
 3. Check `CHANGELOG.md` upstream for new flags and fields, and add them to the option and result types.
 4. Run `pnpm run test:integration`.
-5. Bump the main package version and update `CHANGELOG.md`, then tag and push to release. Afterwards run `pnpm install` and commit the lockfile.
+5. Bump the main package version and update `CHANGELOG.md`, then tag and push to release. Afterwards run `pnpm update '@thirtified/eudi-dev-*'` and commit the lockfile.
 
 ## Security
 
