@@ -15,18 +15,18 @@ export type TrustListId = 'pid' | 'qeaa' | 'pub-eaa' | 'eaa' | 'wallet-provider'
 
 export interface TrustShowOptions extends CallOptions {
   /** List id. Default: the PID provider list. */
-  list?: TrustListId;
+  list?: TrustListId | undefined;
   /** Select the list covering this SD-JWT VCT. */
-  vct?: string;
+  vct?: string | undefined;
   /** Select the list covering this mdoc docType. */
-  doctype?: string;
+  doctype?: string | undefined;
 }
 
 export interface TrustUrlOptions extends TrustShowOptions {
   /** Wallet server port the URL is built for. Default 8085 upstream. */
-  port?: number;
+  port?: number | undefined;
   /** Use host.docker.internal instead of localhost. */
-  docker?: boolean;
+  docker?: boolean | undefined;
 }
 
 export interface TrustAddCaOptions extends CallOptions {
@@ -35,7 +35,7 @@ export interface TrustAddCaOptions extends CallOptions {
   /** PEM with the CA certificates. */
   ca: FileInput;
   /** Provider name on the list. Default the CA's common name. */
-  name?: string;
+  name?: string | undefined;
 }
 
 /**

@@ -16,7 +16,7 @@ export interface EudiDevErrorDetails {
    */
   document?: unknown;
   /** Set when the process did not finish in time. */
-  timedOut?: boolean;
+  timedOut?: boolean | undefined;
   /** Underlying error (spawn failure, invalid JSON, ...). */
   cause?: unknown;
 }

@@ -14,6 +14,12 @@ export type JsonObject = { [key: string]: unknown };
 /** Lets an object carry fields added by later v3 releases. */
 type Open = { [key: string]: unknown };
 
+/**
+ * Like `Partial<T>`, but also accepts an explicit `undefined` under
+ * `exactOptionalPropertyTypes`. Used for objects that callers pass in.
+ */
+export type Loose<T> = { [K in keyof T]?: T[K] | undefined };
+
 // ── Checks ────────────────────────────────────────────────────────────────
 
 export type CheckStatus = 'pass' | 'fail' | 'warning' | 'skipped';
@@ -229,23 +235,24 @@ export type ValidateReport = DecodedCredential & {
 
 // ── dcql ──────────────────────────────────────────────────────────────────
 
+// Also an input (registrar add --dcql), so optional fields accept undefined.
 export interface DcqlClaimQuery extends Open {
-  id?: string;
+  id?: string | undefined;
   path: (string | number | null)[];
-  values?: unknown[];
+  values?: unknown[] | undefined;
 }
 
 export interface DcqlCredentialQuery extends Open {
   id: string;
   format: 'dc+sd-jwt' | 'jwt_vc_json' | 'mso_mdoc' | (string & {});
-  meta?: { vct_values?: string[]; doctype_value?: string } & Open;
-  claims?: DcqlClaimQuery[];
-  claim_sets?: string[][];
+  meta?: ({ vct_values?: string[] | undefined; doctype_value?: string | undefined } & Open) | undefined;
+  claims?: DcqlClaimQuery[] | undefined;
+  claim_sets?: string[][] | undefined;
 }
 
 export interface DcqlQuery extends Open {
   credentials: DcqlCredentialQuery[];
-  credential_sets?: unknown[];
+  credential_sets?: unknown[] | undefined;
 }
 
 // ── issue ─────────────────────────────────────────────────────────────────
@@ -361,18 +368,18 @@ export interface AccessCertificateResult extends Open {
 }
 
 export interface AccessCertificateRequest extends Open {
-  identifier?: string;
-  serviceIdentifier?: string;
+  identifier?: string | undefined;
+  serviceIdentifier?: string | undefined;
   csr: string;
-  dnsNames?: string[];
-  validity?: string;
+  dnsNames?: string[] | undefined;
+  validity?: string | undefined;
 }
 
 /** Input of `registrar enrol`, as for POST /api/registrar/enrolments. */
 export interface Enrolment extends Open {
-  relyingParty: Partial<RelyingParty> & Open;
-  access?: AccessCertificateRequest;
-  registration?: JsonObject;
+  relyingParty: Loose<RelyingParty> & Open;
+  access?: AccessCertificateRequest | undefined;
+  registration?: JsonObject | undefined;
 }
 
 export interface EnrolmentResult extends Open {

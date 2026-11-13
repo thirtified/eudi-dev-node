@@ -6,7 +6,7 @@ import type { DcqlQuery, DecodeCredentialResult, DecodeResult, IssueDocument, Js
 /** Per-call options shared by every wrapper. */
 export type CallOptions = Pick<RunOptions, 'timeoutMs' | 'signal'> & {
   /** Appended to the generated arguments, for flags this package doesn't wrap. */
-  extraArgs?: string[];
+  extraArgs?: string[] | undefined;
 };
 
 function runOpts(opts: CallOptions, stdin?: string | Uint8Array): RunOptions {
@@ -30,7 +30,7 @@ export type DecodeFormat = 'sdjwt' | 'jwt' | 'mdoc' | 'vci' | 'vp' | 'trusted-li
 
 export interface DecodeOptions extends CallOptions {
   /** Skip auto-detection (`--format`). */
-  format?: DecodeFormat;
+  format?: DecodeFormat | undefined;
 }
 
 /**
@@ -60,15 +60,15 @@ export function isDecodedCredential(doc: DecodeResult): doc is DecodeCredentialR
 
 export interface ValidateOptions extends CallOptions {
   /** Issuer public key, PEM or JWK (`--key`). A JWK object is serialised. */
-  key?: FileInput | JsonObject;
+  key?: FileInput | JsonObject | undefined;
   /** ETSI trusted list JWT: content, `{ path }` or `{ url }` (`--trusted-list`). */
-  trustedList?: FileInput;
+  trustedList?: FileInput | undefined;
   /** Check the status list when the credential references one. Default `true` upstream. */
-  statusList?: boolean;
+  statusList?: boolean | undefined;
   /** Don't fail on a credential outside its validity period. */
-  allowExpired?: boolean;
+  allowExpired?: boolean | undefined;
   /** Also report HAIP 1.0 findings (informational, they don't fail validation). */
-  haip?: boolean;
+  haip?: boolean | undefined;
 }
 
 export interface ValidateResult {
@@ -146,90 +146,90 @@ export type CredentialCategory = 'pid' | 'qeaa' | 'pub-eaa' | 'eaa' | 'unlisted'
 
 /** Card display flags, used with `wallet: true`. */
 export interface IssueDisplayOptions {
-  name?: string;
-  description?: string;
-  backgroundColor?: string;
-  textColor?: string;
+  name?: string | undefined;
+  description?: string | undefined;
+  backgroundColor?: string | undefined;
+  textColor?: string | undefined;
   /** File path, data URI or http(s) URL. */
-  logo?: string;
-  logoAlt?: string;
+  logo?: string | undefined;
+  logoAlt?: string | undefined;
   /** File path, data URI or http(s) URL. */
-  backgroundImage?: string;
+  backgroundImage?: string | undefined;
   /** Take unset display values from this template. */
-  template?: string;
+  template?: string | undefined;
 }
 
 /** Trust and issuer metadata stored for the credential type with `wallet: true`. */
 export interface IssueRegistrationOptions {
-  category?: CredentialCategory;
-  entitlements?: string[];
-  trustedListType?: string;
-  statusDeterminationApproach?: string;
-  schemeCommunityRule?: string;
-  schemeTerritory?: string;
-  trustedEntityName?: string;
-  issuanceServiceType?: string;
-  revocationServiceType?: string;
-  issuanceServiceName?: string;
-  revocationServiceName?: string;
+  category?: CredentialCategory | undefined;
+  entitlements?: string[] | undefined;
+  trustedListType?: string | undefined;
+  statusDeterminationApproach?: string | undefined;
+  schemeCommunityRule?: string | undefined;
+  schemeTerritory?: string | undefined;
+  trustedEntityName?: string | undefined;
+  issuanceServiceType?: string | undefined;
+  revocationServiceType?: string | undefined;
+  issuanceServiceName?: string | undefined;
+  revocationServiceName?: string | undefined;
 }
 
 export interface IssueCommonOptions extends CallOptions {
   /** Claims as an object (written to a temp file) or `{ path }` to a JSON file. Overrides top-level template claims. */
-  claims?: JsonObject | { path: string };
+  claims?: JsonObject | { path: string } | undefined;
   /** Private signing key, PEM or JWK. Ephemeral P-256 if omitted. */
-  key?: FileInput | JsonObject;
+  key?: FileInput | JsonObject | undefined;
   /** Certificate chain PEM, leaf first, embedded as x5c / x5chain. Requires `key`. */
-  cert?: FileInput;
+  cert?: FileInput | undefined;
   /** Expiration as a Go duration, default `720h`. */
-  exp?: string;
+  exp?: string | undefined;
   /** Not-before: RFC 3339 time or a duration such as `-1h`. */
-  nbf?: string;
+  nbf?: string | undefined;
   /** Use the full EUDI PID Rulebook claim set. */
-  pid?: boolean;
+  pid?: boolean | undefined;
   /** Claim names to leave out. */
-  omit?: string[];
+  omit?: string[] | undefined;
   /** Template name, or `{ path }` to a template file. */
-  template?: string | { path: string };
+  template?: string | { path: string } | undefined;
   /** Save the issued claims and settings as a template with this name. */
-  saveTemplate?: string;
-  statusListUri?: string;
-  statusListIdx?: number;
+  saveTemplate?: string | undefined;
+  statusListUri?: string | undefined;
+  statusListIdx?: number | undefined;
   /** Import into the wallet under the instance's EUDI_DEV_HOME. */
-  wallet?: boolean;
-  walletDir?: string;
-  templatesDir?: string;
+  wallet?: boolean | undefined;
+  walletDir?: string | undefined;
+  templatesDir?: string | undefined;
   /** With `wallet`: `file`, `memory`, `auto` or a `postgres://` URL. */
-  storage?: string;
+  storage?: string | undefined;
   /** With `wallet`: derive generated keys from this string. */
-  seed?: string;
-  display?: IssueDisplayOptions;
-  registration?: IssueRegistrationOptions;
+  seed?: string | undefined;
+  display?: IssueDisplayOptions | undefined;
+  registration?: IssueRegistrationOptions | undefined;
   /** With `saveTemplate`: add the template to the attestation catalogue with this entry. */
-  catalog?: JsonObject;
+  catalog?: JsonObject | undefined;
 }
 
 export interface IssueSdJwtOptions extends IssueCommonOptions {
-  iss?: string;
-  vct?: string;
+  iss?: string | undefined;
+  vct?: string | undefined;
   /** Claims issued plainly instead of selectively disclosable (dotted paths for nested claims). */
-  alwaysDisclosed?: string[];
+  alwaysDisclosed?: string[] | undefined;
   /** With `wallet`: issue this many copies with separate holder keys (max 8). */
-  batch?: number;
+  batch?: number | undefined;
   /** With `wallet`: issue without a holder key. */
-  unbound?: boolean;
+  unbound?: boolean | undefined;
 }
 
 export interface IssueJwtOptions extends IssueCommonOptions {
-  iss?: string;
-  vct?: string;
+  iss?: string | undefined;
+  vct?: string | undefined;
 }
 
 export interface IssueMdocOptions extends IssueCommonOptions {
-  docType?: string;
-  namespace?: string;
-  batch?: number;
-  unbound?: boolean;
+  docType?: string | undefined;
+  namespace?: string | undefined;
+  batch?: number | undefined;
+  unbound?: boolean | undefined;
 }
 
 export interface IssueResult {

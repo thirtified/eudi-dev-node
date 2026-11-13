@@ -69,9 +69,5 @@
     "publint": "0.3.25",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true,
-    "fsevents@2.3.3": true
   }
 }
