@@ -99,6 +99,28 @@ describe('wrappers', () => {
     assert.ok(log.last().argv.includes('--trusted-list=http://localhost:8085/api/trustlist'));
   });
 
+  it('treats options set to undefined like omitted options', async () => {
+    // Callers with exactOptionalPropertyTypes pass maybe-undefined values,
+    // e.g. the README's `{ key: publicJwk }`. They must not reach argv.
+    await eudi.validate('good~', {});
+    const omitted = log.last().argv;
+    await eudi.validate('good~', {
+      key: undefined,
+      trustedList: undefined,
+      haip: undefined,
+      statusList: undefined,
+      extraArgs: undefined,
+      timeoutMs: undefined,
+      signal: undefined,
+    });
+    assert.deepEqual(log.last().argv, omitted);
+
+    await eudi.issue.sdjwt({ pid: true });
+    const issueOmitted = log.last().argv;
+    await eudi.issue.sdjwt({ pid: true, claims: undefined, key: undefined, vct: undefined, iss: undefined, omit: undefined });
+    assert.deepEqual(log.last().argv, issueOmitted);
+  });
+
   it('validate throws when there is no report', async () => {
     await assert.rejects(eudi.validate('unparsable'), /parsing SD-JWT/);
   });
