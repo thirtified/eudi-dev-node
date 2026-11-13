@@ -8,13 +8,13 @@ import { type FileInput, type Input, isPathInput, isUrlInput } from './input.js'
 
 export interface RunOptions {
   /** Written to the process's stdin. Without it stdin is closed (/dev/null). */
-  stdin?: string | Uint8Array;
+  stdin?: string | Uint8Array | undefined;
   /** Kill the process after this many milliseconds. Default: the runner's timeout. */
-  timeoutMs?: number;
+  timeoutMs?: number | undefined;
   /** Aborts the process. */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   /** Add `--json` and parse stdout as one JSON document. Default `true`. */
-  json?: boolean;
+  json?: boolean | undefined;
 }
 
 export interface RunResult<T = unknown> {
@@ -30,17 +30,17 @@ export interface RunnerConfig {
   /** Becomes EUDI_DEV_HOME. */
   home: string;
   /** Extra environment for every call. `undefined` removes a variable. */
-  env?: Record<string, string | undefined>;
+  env?: Record<string, string | undefined> | undefined;
   /**
    * Pass the caller's EUDI_DEV_* variables through to the binary. Default
    * `false`: they are removed so that a developer's shell setup
    * (EUDI_DEV_STORAGE, EUDI_DEV_SEED, ...) can't change test results.
    */
-  inheritEudiEnv?: boolean;
-  timeoutMs?: number;
-  cwd?: string;
+  inheritEudiEnv?: boolean | undefined;
+  timeoutMs?: number | undefined;
+  cwd?: string | undefined;
   /** Upper bound for captured stdout plus stderr. Default 64 MiB. */
-  maxBufferBytes?: number;
+  maxBufferBytes?: number | undefined;
 }
 
 const STRIPPED_LEGACY_VARS = ['OID4VC_DEV_HOME', 'EUDI_REMOTE_TIMEOUT'];

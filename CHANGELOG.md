@@ -6,6 +6,14 @@ All notable changes to `@thirtified/eudi-dev` are documented here. The format fo
 
 ## [Unreleased]
 
+### Fixed
+
+- Option types accept an explicit `undefined` for every optional property, so code compiled with `exactOptionalPropertyTypes: true` can pass maybe-undefined values, for example `validate(credential, { key: publicJwk })` from the README. This also covers the inputs `Enrolment`, `AccessCertificateRequest` and the `Dcql*` query types. Passing `undefined` behaves like leaving the option out.
+
+### Added
+
+- `Loose<T>`: like `Partial<T>`, but optional properties also accept `undefined`. `Enrolment.relyingParty` uses it.
+
 ## [0.1.0]
 
 First release, for eudi-dev v3.10.1.

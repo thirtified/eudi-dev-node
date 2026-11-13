@@ -28,16 +28,16 @@ export const PLATFORM_PACKAGES: readonly PlatformPackage[] = [
 
 export interface ResolveBinaryOptions {
   /** Use this binary and skip the lookup. Takes precedence over `EUDI_DEV_BIN`. */
-  bin?: string;
+  bin?: string | undefined;
   /** Override the detected platform (mainly for tests). Default `process.platform`. */
-  platform?: NodeJS.Platform;
+  platform?: NodeJS.Platform | undefined;
   /** Override the detected architecture (mainly for tests). Default `process.arch`. */
-  arch?: string;
+  arch?: string | undefined;
   /**
    * Resolves a module specifier to a file path (mainly for tests). Default
    * `createRequire(import.meta.url).resolve`.
    */
-  resolve?: (specifier: string) => string;
+  resolve?: ((specifier: string) => string) | undefined;
 }
 
 /**

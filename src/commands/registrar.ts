@@ -24,15 +24,15 @@ export interface PartyOptions {
   /** Trade name. Required for a new registration. */
   name: string;
   /** An EUID or an organizationIdentifier. Default: an assigned EUID. */
-  identifier?: string;
+  identifier?: string | undefined;
   /** Default `name`. */
-  legalName?: string;
+  legalName?: string | undefined;
   /** Country code. Default the identifier's country. */
-  country?: string;
+  country?: string | undefined;
   /** Web or email address. */
-  supportUri?: string;
+  supportUri?: string | undefined;
   /** Service identifier (the OU in access certificates). */
-  serviceId?: string;
+  serviceId?: string | undefined;
 }
 
 export interface IntendedUseOptions {
@@ -41,7 +41,7 @@ export interface IntendedUseOptions {
   /** DCQL query with the credentials and claims to register. */
   dcql: DcqlQuery | FileInput;
   /** Privacy policy URL. Default a placeholder page on the wallet. */
-  privacyPolicy?: string;
+  privacyPolicy?: string | undefined;
 }
 
 export type AddVerifierOptions = PartyOptions & IntendedUseOptions & CallOptions;
@@ -55,7 +55,7 @@ export interface AttestationOptions {
   /** `format:type`, e.g. `dc+sd-jwt:urn:eudi:pid:1` or `mso_mdoc:eu.europa.ec.eudi.pid.1`. */
   attestations: string[];
   /** Provider entitlement categories: pid, qeaa, pub-eaa, eaa. Default from the catalogue. */
-  categories?: string[];
+  categories?: string[] | undefined;
 }
 
 export type AddIssuerOptions = PartyOptions & AttestationOptions & CallOptions;
@@ -66,30 +66,30 @@ export interface AccessCertOptions extends CallOptions {
   identifier: string;
   /** PEM certificate signing request. */
   csr: FileInput;
-  serviceId?: string;
+  serviceId?: string | undefined;
   /** Extra DNS names for the x509_san_dns client identifier. */
-  dns?: string[];
+  dns?: string[] | undefined;
   /** Go duration, at most one year. */
-  validity?: string;
+  validity?: string | undefined;
 }
 
 export interface RegistrationCertOptions extends CallOptions {
   identifier: string;
-  serviceId?: string;
+  serviceId?: string | undefined;
   /** Default the relying party's only intended use. */
-  intendedUse?: string;
+  intendedUse?: string | undefined;
   /** Certify the attestation provider service instead of an intended use. */
-  provider?: boolean;
+  provider?: boolean | undefined;
   /** Issue a new certificate and revoke the current one (`--new`). */
-  renew?: boolean;
+  renew?: boolean | undefined;
   /** Validity of a new certificate as a Go duration. Requires `renew` when one exists. */
-  validity?: string;
+  validity?: string | undefined;
 }
 
 export interface RegistrationScopeOptions extends CallOptions {
   identifier: string;
-  intendedUse?: string;
-  serviceId?: string;
+  intendedUse?: string | undefined;
+  serviceId?: string | undefined;
 }
 
 function isDcqlObject(v: unknown): v is DcqlQuery {
@@ -183,7 +183,7 @@ export class RegistrarCommands {
   }
 
   /** `registrar enrol`: register a relying party and issue its certificates in one step. */
-  async enrol(enrolment: Enrolment, opts: CallOptions & { update?: boolean } = {}): Promise<EnrolmentResult> {
+  async enrol(enrolment: Enrolment, opts: CallOptions & { update?: boolean | undefined } = {}): Promise<EnrolmentResult> {
     const args = new ArgList('registrar', 'enrol').on('update', opts.update).push(...(opts.extraArgs ?? []), '-');
     const { document } = await this.runner.run<EnrolmentResult>(args.args, runOpts(opts, JSON.stringify(enrolment)));
     return document;

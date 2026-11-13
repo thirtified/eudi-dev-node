@@ -33,17 +33,17 @@ export interface EudiDevOptions extends ResolveBinaryOptions {
    * EUDI_DEV_HOME for every call: wallet, CA, templates, registrar state.
    * Default: a new temp directory per instance, removed by {@link EudiDev.dispose}.
    */
-  home?: string;
+  home?: string | undefined;
   /** Extra environment variables for every call. `undefined` removes one. */
-  env?: Record<string, string | undefined>;
+  env?: Record<string, string | undefined> | undefined;
   /** Pass the caller's EUDI_DEV_* variables through. Default `false`. */
-  inheritEudiEnv?: boolean;
+  inheritEudiEnv?: boolean | undefined;
   /** Default timeout per call in ms. Default 60 000. 0 turns it off. */
-  timeoutMs?: number;
+  timeoutMs?: number | undefined;
   /** Working directory of the child process. */
-  cwd?: string;
+  cwd?: string | undefined;
   /** Accept a binary whose major version isn't {@link SUPPORTED_MAJOR}. Default `false`. */
-  allowAnyVersion?: boolean;
+  allowAnyVersion?: boolean | undefined;
 }
 
 /**
