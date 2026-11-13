@@ -178,14 +178,28 @@ It downloads the release's `checksums.txt` and the four assets, fails on any SHA
 `.github/workflows/release.yml` runs on a tag `v<package.json version>` or by hand:
 
 1. It builds the platform packages at the version pinned in `optionalDependencies`, and checks that all four pins agree (`--verify-main`).
-2. It publishes each one with `npm publish --provenance --access public`, skipping versions already on npm.
-3. Then it tests, builds and publishes `@thirtified/eudi-dev`.
+2. It stages each one with `npm stage publish --provenance`, skipping versions already published or staged.
+3. Then it tests, builds and stages `@thirtified/eudi-dev`.
+4. You approve the staged versions with 2FA, on npmjs.com or with `npm stage list <pkg>` and `npm stage approve <id>`. The job summary lists them. **Approve the four platform packages first, then the main package.** npm skips a missing optional dependency silently, so a live main package without its platform packages installs without a binary.
 
-Both publish jobs run in the `npm` GitHub environment, so a release waits for a reviewer's approval. The first publish of each package needs the `NPM_TOKEN` secret, stored in that environment. Afterwards you can switch to npm trusted publishing, naming `release.yml` and the `npm` environment. `package.json` needs a `repository` field that matches the GitHub repo, for provenance. The platform packages take theirs from it, falling back to `$GITHUB_REPOSITORY`.
+Nothing goes live without that 2FA approval. Both jobs run in the `npm` GitHub environment, which holds `NPM_TOKEN`: a granular token limited to staging. You can later replace it with npm trusted publishing, allowing only staging: `npm trust github <pkg> --repo thirtified/eudi-dev-node --file release.yml --env npm --allow-stage-publish`. `package.json` needs a `repository` field that matches the GitHub repo, for provenance. The platform packages take theirs from it, falling back to `$GITHUB_REPOSITORY`.
 
-The repo uses pnpm (the version is pinned in `packageManager`) for installing, building and testing. Publishing uses `npm publish`, because provenance and trusted publishing are defined for the npm CLI. pnpm skips an optional dependency it can't fetch, so `pnpm install --frozen-lockfile` passes even while a platform package isn't on npm yet. After the platform packages are published, run `pnpm install` and commit the updated `pnpm-lock.yaml`.
+The repo uses pnpm (the version is pinned in `packageManager`) for installing, building and testing. Publishing uses the npm CLI (`npm stage publish`), because provenance, staging and trusted publishing are defined for it. pnpm skips an optional dependency it can't fetch, so `pnpm install --frozen-lockfile` passes even while a platform package isn't on npm yet. After the platform packages are published, run `pnpm install` and commit the updated `pnpm-lock.yaml`.
 
 The unit tests use `test/fixtures/fake-eudi.mjs`, which follows the same JSON contract and logs each call, so the tests can check argument building, temp files, stdin and the environment. The fake binary is a shebang script, so the tests need macOS or Linux.
+
+### First release
+
+npm can stage versions only of packages that already exist, so publish the first version of all five packages from your machine, with 2FA:
+
+```bash
+pnpm install && pnpm run lint && pnpm test
+node scripts/build-platform-packages.mjs --verify-main     # all four into npm/, checksum-verified
+for dir in npm/*/; do npm publish "$dir" --access public --provenance=false; done
+npm publish --provenance=false                             # the main package, last
+```
+
+`--provenance=false` is needed because provenance can only be generated in CI, and `publishConfig` turns it on. These first versions therefore carry no provenance. Every later release goes through the workflow and has it.
 
 ## Updating upstream
 
