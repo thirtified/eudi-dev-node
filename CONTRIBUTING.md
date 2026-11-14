@@ -31,6 +31,7 @@ Or set `EUDI_DEV_BIN` to an `eudi` binary you have already.
 - Keep changes focused, and add or update tests. Unit tests use `test/fixtures/fake-eudi.mjs`, which logs each call so tests can check argv, stdin, temp files and the environment.
 - New options and result fields follow the upstream Go structs at the pinned version. Mention the upstream source in the PR.
 - Add a line under "Unreleased" in `CHANGELOG.md` for user-visible changes.
+- The `ts` examples under "Usage" in `README.md` are tested (`test/integration/readme.test.ts`). They run as one script, in order, and are typechecked with `strict` and `exactOptionalPropertyTypes`. Keep each `import` on one line, and say so when an example continues an earlier one.
 - CI (lint, typecheck, `lint:package`, and unit and integration tests on Linux and macOS) has to pass.
 
 By contributing you agree that your contribution is licensed under the Apache License 2.0, like the rest of the project.

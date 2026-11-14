@@ -91,7 +91,16 @@ File-valued options (`key`, `trustedList`, `cert`, `csr`, `dcql`, `claims`, `ca`
 
 These commands work on the wallet in the instance's `EUDI_DEV_HOME`, which is created on first use. Pass `home` to keep state between instances.
 
+The example continues the one above: it uses `eudi` and `query` from there. The access-certificate calls need a PEM certificate signing request for your verifier's key, here `verifier.csr` in the working directory:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out verifier.key
+openssl req -new -key verifier.key -subj "/CN=shop.example" -out verifier.csr
+```
+
 ```ts
+import { readFile } from 'node:fs/promises';
+
 const issued = await eudi.issue.sdjwt({ pid: true, wallet: true }); // issued.id
 const trustedList = await eudi.trust.show({ vct: 'urn:eudi:pid:1' }); // signed JWT
 await eudi.validate(issued.credential, { trustedList, statusList: false });
@@ -99,13 +108,18 @@ await eudi.validate(issued.credential, { trustedList, statusList: false });
 const caPem = await eudi.trust.caCert();
 const caJwks = await eudi.trust.caJwks();
 
+// Register a verifier, then get its registration and access certificates
 const rp = await eudi.registrar.verifiers.add({ name: 'Shop', purpose: 'Age check', dcql: query });
 const id = rp.identifier[0]!.identifier;
 const { registrationCertificate, verifierInfo } = await eudi.registrar.registrationCert({ identifier: id });
+const { certificate, chain } = await eudi.registrar.accessCert({ identifier: id, csr: { path: 'verifier.csr' } });
 await eudi.registrar.revoke({ identifier: id });
+
 await eudi.registrar.issuers.add({ name: 'Diplomas Inc', attestations: ['dc+sd-jwt:urn:example:diploma:1'] });
-await eudi.registrar.accessCert({ identifier: id, csr: { path: 'verifier.csr' } });
-await eudi.registrar.enrol({ relyingParty: { tradeName: 'X' }, access: { csr: csrPem } });
+
+// Register and get an access certificate in one step. The CSR can also be passed as content.
+const csrPem = await readFile('verifier.csr', 'utf8');
+await eudi.registrar.enrol({ relyingParty: { tradeName: 'Shop' }, access: { csr: csrPem } });
 ```
 
 A wallet-issued credential points to the wallet's own status list, which only `wallet serve` serves. Without a running server, validate it with `statusList: false`.

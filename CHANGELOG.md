@@ -6,6 +6,10 @@ All notable changes to `@thirtified/eudi-dev` are documented here. The format fo
 
 ## [Unreleased]
 
+### Fixed
+
+- README: the wallet, trust and registrar example now defines `csrPem`, shows how to create the `verifier.csr` it reads, and says that it continues the first example. Both Usage examples typecheck with `strict` and `exactOptionalPropertyTypes` and run against eudi-dev v3.10.1.
+
 ## [0.1.1]
 
 ### Fixed
