@@ -19,6 +19,8 @@ pnpm add -D @thirtified/eudi-dev
 # or: npm install --save-dev @thirtified/eudi-dev
 ```
 
+With TypeScript, also install the Node types: `pnpm add -D @types/node`. The package's type definitions use them and load them for you, so you don't need `"types": ["node"]` in your tsconfig, which TypeScript 6 and later would otherwise require.
+
 The eudi-dev binary comes in one npm package per platform, listed as `optionalDependencies` with exact versions. The package manager installs only the one that matches your OS and CPU. Nothing is downloaded at install time or at runtime, and there is no install script.
 
 | Platform | Package | Upstream asset |

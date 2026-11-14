@@ -70,8 +70,9 @@ describe('README usage examples', { timeout: TIMEOUT, skip: !(await hasOpenssl()
           module: 'NodeNext',
           moduleResolution: 'NodeNext',
           lib: ['ES2022', 'ESNext.Disposable'],
-          types: ['node'],
-          typeRoots: [join(ROOT, 'node_modules', '@types')],
+          // No "types": like a default TypeScript 6+ project, which loads no
+          // @types packages. The package's own reference directive must bring
+          // in the Node types (also for the README's `node:fs/promises`).
           // Strict user code: what users with these flags get to see.
           strict: true,
           exactOptionalPropertyTypes: true,
