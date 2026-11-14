@@ -11,13 +11,14 @@ name: Release
 # the main package: npm skips a missing optional dependency silently, so a
 # live main package without its platform packages installs without a binary.
 #
-# Staging needs the package to exist on npm already. The first publish of
-# each package is manual (see "First release" in the README).
+# Staging needs the package to exist on npm already, so the first version of
+# a new package is published by hand (see "Releasing" in CONTRIBUTING.md).
 #
-# Both jobs run in the "npm" environment, which holds the NPM_TOKEN secret (a
-# granular token limited to staging). Later npm trusted publishing can
-# replace it: `npm trust github <pkg> --repo thirtified/eudi-dev-node
-# --file release.yml --env npm --allow-stage-publish`.
+# Both jobs run in the "npm" environment and publish through npm trusted
+# publishing (OIDC, hence id-token: write), so no npm token is stored. Each
+# package trusts this workflow for staging only:
+# `npm trust github <pkg> --repo thirtified/eudi-dev-node --file release.yml
+# --env npm --allow-stage-publish`.
 #
 # pnpm installs and builds; npm publishes, because npm's CLI is what
 # provenance and trusted publishing are specified against. The main package
@@ -74,8 +75,6 @@ jobs:
           node scripts/build-platform-packages.mjs --package-version "$version" --verify-main
 
       - name: Stage platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           . scripts/release-lib.sh
           for dir in npm/*/; do
@@ -132,8 +131,6 @@ jobs:
       - run: pnpm run build
 
       - name: Stage @thirtified/eudi-dev
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           . scripts/release-lib.sh
           name=$(node -p "require('./package.json').name")
