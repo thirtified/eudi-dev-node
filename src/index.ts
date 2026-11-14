@@ -1,3 +1,9 @@
+// The public types use Node's (NodeJS.Platform, NodeJS.Signals, ...). Load them
+// for every program that imports this package, also under TypeScript 6+, where
+// "types" no longer defaults to all of node_modules/@types. preserve="true"
+// keeps the directive in the emitted index.d.ts.
+/// <reference types="node" preserve="true" />
+
 export {
   PLATFORM_PACKAGES,
   type PlatformPackage,

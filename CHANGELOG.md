@@ -8,6 +8,7 @@ All notable changes to `@thirtified/eudi-dev` are documented here. The format fo
 
 ### Fixed
 
+- The type definitions load the Node types themselves (`/// <reference types="node" />`). In TypeScript 6+ projects without `"types": ["node"]`, Node-typed options such as `platform` and `signal` were errors, or silently `any` under `skipLibCheck`. TypeScript users need `@types/node` installed.
 - README: the wallet, trust and registrar example now defines `csrPem`, shows how to create the `verifier.csr` it reads, and says that it continues the first example. Both Usage examples typecheck with `strict` and `exactOptionalPropertyTypes` and run against eudi-dev v3.10.1.
 
 ## [0.1.1]
