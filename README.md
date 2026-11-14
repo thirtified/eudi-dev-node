@@ -32,7 +32,7 @@ The eudi-dev binary comes in one npm package per platform, listed as `optionalDe
 
 Windows isn't supported yet. Upstream publishes `eudi-v3.10.1-windows-amd64.exe`, and you can point `EUDI_DEV_BIN` at it, but the wrapper is untested on Windows.
 
-Each package contains the upstream release binary unchanged, checked against the release's `checksums.txt` (SHA-256) when it was built, plus upstream's Apache-2.0 `LICENSE`. Its README and the `eudiDev` field in its `package.json` record the release and the hash.
+Each package contains the upstream release binary unchanged, checked against the release's `checksums.txt` (SHA-256) when it was built, plus upstream's Apache-2.0 `LICENSE`. Its README and the `eudiDev` field in its `package.json` record the release and the hash. A platform package has the upstream version without the `v` (`3.10.1`), with a suffix such as `3.10.1-1` if the same release had to be repackaged.
 
 The binary is found in this order:
 
@@ -151,81 +151,9 @@ Each call runs with:
 
 The `--json` document types (`ValidateReport`, `DecodedSdJwt`, `DecodedMdoc`, `Check`, `StatusResult`, `RelyingParty`, `TrustOverview`, …) are written by hand from the Go structs at v3.10.1. Upstream publishes no schema for them. Every object type also accepts unknown keys, so fields added in later v3 releases still type-check. `decode` of OpenID4VCI offers, OpenID4VP requests and trusted lists returns a plain `JsonObject`.
 
-## Development
+## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and pull requests. In short:
-
-```bash
-pnpm install
-pnpm run typecheck
-pnpm test                  # unit tests against a fake binary (node:test, Node 22+)
-pnpm run test:integration  # real binary: EUDI_DEV_BIN or the platform package
-pnpm run lint             # Biome (lint:fix to fix); lint:package runs publint and attw
-pnpm run build
-```
-
-The pnpm version is pinned in `packageManager` (enable it with `corepack enable`, or install that version). `pnpm-workspace.yaml` denies esbuild's install script (`allowBuilds`). tsx doesn't need it, and pnpm otherwise stops the install to ask.
-
-Before the platform packages are on npm, or to test a new upstream release, build your own platform's package into `node_modules`. If a later `pnpm install` prunes it, run it again:
-
-```bash
-node scripts/build-platform-packages.mjs --only current --out node_modules/@thirtified
-```
-
-## Platform packages
-
-`scripts/build-platform-packages.mjs` builds them (Node only, no dependencies):
-
-```bash
-node scripts/build-platform-packages.mjs            # all four into npm/, upstream tag from src/version.ts
-node scripts/build-platform-packages.mjs --help     # all options
-```
-
-It downloads the release's `checksums.txt` and the four assets, fails on any SHA-256 mismatch without writing anything, and writes `npm/eudi-dev-<os>-<cpu>/` with `bin/eudi` (mode 0755), `package.json`, `LICENSE` (from the upstream tag) and `README.md`. `--base-url` points it at a mirror (`file:` URLs work). Node's `fetch` ignores `HTTPS_PROXY`; behind a proxy run it with `NODE_USE_ENV_PROXY=1` (Node 22.21+ / 24).
-
-### Versions
-
-- A platform package has the upstream version without the `v`: `3.10.1` for `v3.10.1`.
-- To fix the packaging of the same upstream release, add `-<n>`: `3.10.1-1`, `3.10.1-2`. npm can't republish a version, and it ignores `+build` metadata. Being a semver prerelease, `3.10.1-1` sorts below `3.10.1`, which doesn't matter because the main package pins exact versions.
-- The main package has its own version and pins the platform packages exactly in `optionalDependencies`. `--sync-main` writes those pins.
-
-### Releasing
-
-`.github/workflows/release.yml` runs on a tag `v<package.json version>` or by hand:
-
-1. It builds the platform packages at the version pinned in `optionalDependencies`, and checks that all four pins agree (`--verify-main`).
-2. It stages each one with `npm stage publish --provenance`, skipping versions already published or staged.
-3. Then it tests, builds and stages `@thirtified/eudi-dev`.
-4. You approve the staged versions with 2FA, on npmjs.com or with `npm stage list <pkg>` and `npm stage approve <id>`. The job summary lists them. **Approve the four platform packages first, then the main package.** npm skips a missing optional dependency silently, so a live main package without its platform packages installs without a binary.
-
-Nothing goes live without that 2FA approval. Both jobs run in the `npm` GitHub environment, which holds `NPM_TOKEN`: a granular token limited to staging. You can later replace it with npm trusted publishing, allowing only staging: `npm trust github <pkg> --repo thirtified/eudi-dev-node --file release.yml --env npm --allow-stage-publish`. `package.json` needs a `repository` field that matches the GitHub repo, for provenance. The platform packages take theirs from it, falling back to `$GITHUB_REPOSITORY`.
-
-The repo uses pnpm (the version is pinned in `packageManager`) for installing, building and testing. Publishing uses the npm CLI (`npm stage publish`), because provenance, staging and trusted publishing are defined for it. pnpm skips an optional dependency it can't fetch, so `pnpm install --frozen-lockfile` passes even while a platform package isn't on npm yet. After the platform packages are published, run `pnpm update '@thirtified/eudi-dev-*'` and commit the updated `pnpm-lock.yaml`. A plain `pnpm install` isn't enough: it treats the skipped packages as resolved and leaves them out. `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` exempts these packages from the one-day wait, so this works right after a release.
-
-The unit tests use `test/fixtures/fake-eudi.mjs`, which follows the same JSON contract and logs each call, so the tests can check argument building, temp files, stdin and the environment. The fake binary is a shebang script, so the tests need macOS or Linux.
-
-### First release
-
-npm can stage versions only of packages that already exist, so publish the first version of all five packages from your machine, with 2FA:
-
-```bash
-pnpm install && pnpm run lint && pnpm test
-node scripts/build-platform-packages.mjs --verify-main     # all four into npm/, checksum-verified
-for dir in npm/*/; do npm publish "$dir" --access public --provenance=false; done
-npm publish --provenance=false                             # the main package, last
-```
-
-`--provenance=false` is needed because provenance can only be generated in CI, and `publishConfig` turns it on. These first versions therefore carry no provenance. Every later release goes through the workflow and has it.
-
-## Updating upstream
-
-The [upstream watch](.github/workflows/upstream-watch.yml) workflow opens an issue with these steps when eudi-dev publishes a new release.
-
-1. Bump `EUDI_DEV_VERSION` in `src/version.ts`.
-2. Run `node scripts/build-platform-packages.mjs --only current --out node_modules/@thirtified --sync-main`. This pins the new version in `optionalDependencies` and installs your platform's package locally.
-3. Check `CHANGELOG.md` upstream for new flags and fields, and add them to the option and result types.
-4. Run `pnpm run test:integration`.
-5. Bump the main package version and update `CHANGELOG.md`, then tag and push to release. Afterwards run `pnpm update '@thirtified/eudi-dev-*'` and commit the lockfile.
+Bug reports and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, tests and releases.
 
 ## Security
 
