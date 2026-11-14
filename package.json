@@ -1,6 +1,6 @@
 {
   "name": "@thirtified/eudi-dev",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Typed Node.js wrapper for the eudi-dev CLI (decode, validate, dcql, issue, trust, registrar)",
   "keywords": [
     "eudi",
