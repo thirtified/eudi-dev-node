@@ -11,6 +11,7 @@ export {
   type ResolveBinaryOptions,
   resolveBinary,
 } from './binary.js';
+export type { CatalogAddOptions, CatalogCommands } from './commands/catalog.js';
 export {
   type CallOptions,
   type CredentialCategory,
@@ -41,7 +42,22 @@ export type {
   RegistrationCertOptions,
   RegistrationScopeOptions,
 } from './commands/registrar.js';
+export type {
+  TemplateCommands,
+  TemplateImportInput,
+  TemplateImportOptions,
+  TemplateSaveOptions,
+  TransactionTemplateCommands,
+} from './commands/templates.js';
 export type { TrustAddCaOptions, TrustCommands, TrustListId, TrustShowOptions, TrustUrlOptions } from './commands/trust.js';
+export {
+  type CredentialInput,
+  isDeferredIssuance,
+  type StoreOptions,
+  type WalletCallOptions,
+  type WalletCommands,
+  type WalletTlsCertOptions,
+} from './commands/wallet.js';
 export { EudiDevBinaryError, EudiDevError, type EudiDevErrorDetails } from './errors.js';
 export { EudiDev, type EudiDevOptions } from './eudi.js';
 export type { FileInput, Input } from './input.js';
