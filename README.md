@@ -4,11 +4,11 @@
 [![npm](https://img.shields.io/npm/v/@thirtified/eudi-dev)](https://www.npmjs.com/package/@thirtified/eudi-dev)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-Typed Node.js wrapper for the [eudi-dev](https://github.com/eudi-dev/eudi-dev) CLI (Apache-2.0). It is built for integration tests that need to issue, decode and validate EUDI credentials (SD-JWT VC, JWT VC, mdoc) and work with the wallet's trusted lists and registrar.
+Typed Node.js wrapper for the [eudi-dev](https://github.com/eudi-dev/eudi-dev) CLI (Apache-2.0). It is built for integration tests that need to issue, decode and validate EUDI credentials (SD-JWT VC, JWT VC, mdoc) and work with the wallet's store, templates, catalogue, trusted lists and registrar.
 
 The package does not bind to the Go code. It runs the CLI with `--json`, which upstream treats as a stable interface (ADR 0020): exactly one JSON document on stdout, messages on stderr, and within a major version fields are only added, never removed.
 
-**Scope:** CLI commands only. It does not start `wallet serve` and has no HTTP client for the wallet API.
+**Scope:** CLI commands that print one `--json` document. Nothing the wrapper runs opens a port: it doesn't start `wallet serve`, and it has no HTTP client for the wallet API. Commands it doesn't wrap yet are listed under [Not wrapped](#not-wrapped).
 
 Targets eudi-dev **v3.10.1**. Any v3.x binary is accepted. No runtime dependencies besides the platform package with the binary.
 
@@ -126,10 +126,40 @@ await eudi.registrar.enrol({ relyingParty: { tradeName: 'Shop' }, access: { csr:
 
 A wallet-issued credential points to the wallet's own status list, which only `wallet serve` serves. Without a running server, validate it with `statusList: false`.
 
+### Wallet store, templates and catalogue
+
+The wallet keeps credentials, templates and catalogue entries in files under the instance's home, so they last from one call to the next. These commands work offline. The example continues the first one: it imports its `credential`.
+
+```ts
+// Store a credential, list the wallet and inspect one credential
+const stored = await eudi.wallet.import(credential); // also { path }
+const { credentials } = await eudi.wallet.list(); // summaries: id, format, vct or doctype, validity, holder_binding
+const full = await eudi.wallet.show(stored.id); // with claims and the raw credential
+await eudi.wallet.remove(stored.id);
+
+// Save a credential template, then issue from it
+await eudi.templates.save('card', { format: 'sdjwt', vct: 'urn:example:card:1', claims: { given_name: 'Erika' } });
+await eudi.issue.sdjwt({ template: 'card' });
+
+// Add an attestation type to the catalogue, and remove it again
+const entry = await eudi.catalog.add({ name: 'Membership', types: ['dc+sd-jwt:urn:example:membership:1'], claims: ['dc+sd-jwt:member_id'] });
+await eudi.catalog.remove(entry.schema.id!);
+```
+
+Also there: `wallet.showDecoded()`, `removeAll()`, `info()`, `tlsCert()`, `tlsJwks()`, `logs()` and `clearLogs()`; `templates.list()`, `show()`, `import()` and `delete()`; the transaction templates under `templates.transactions`; and `catalog.list()`. They take the wallet flags `walletDir`, `storage` and `templatesDir`, and the wallet and catalogue commands also `mode` and `seed`.
+
+### Not wrapped
+
+These commands run through `eudi.run()` only:
+
+- **Talking to an issuer or a verifier:** `wallet accept`, `wallet scan`, `wallet deferred`, `wallet refresh`, `wallet requests`, `wallet use`. Wrapping them is planned.
+- **Running a server:** `wallet serve`, `decoder`, `proxy` and `proxy logs`. They keep running, so they print no single `--json` document.
+- **For a person at a desktop:** `wallet extension`, `wallet browser`, `wallet register` and `wallet unregister` (OS URL handlers), `wallet ps` and `wallet kill`, `completion`.
+
 ### Escape hatches
 
 - Every wrapper takes `extraArgs` for flags it doesn't model, plus `timeoutMs` and `signal`.
-- `eudi.run<T>(['templates', 'list'])` runs any command with `--json` and returns `{ document, stdout, stderr }`.
+- `eudi.run<T>(['wallet', 'deferred'])` runs any command with `--json` and returns `{ document, stdout, stderr }`.
 - `new Runner({ bin, home })` gives the bare runner without the version check.
 - `resolveBinary()` returns the binary path the lookup above finds, and `platformPackage()` the package for a platform.
 
@@ -149,7 +179,7 @@ Each call runs with:
 
 ## Types
 
-The `--json` document types (`ValidateReport`, `DecodedSdJwt`, `DecodedMdoc`, `Check`, `StatusResult`, `RelyingParty`, `TrustOverview`, …) are written by hand from the Go structs at v3.10.1. Upstream publishes no schema for them. Every object type also accepts unknown keys, so fields added in later v3 releases still type-check. `decode` of OpenID4VCI offers, OpenID4VP requests and trusted lists returns a plain `JsonObject`.
+The `--json` document types (`ValidateReport`, `DecodedSdJwt`, `DecodedMdoc`, `Check`, `StatusResult`, `RelyingParty`, `TrustOverview`, `WalletCredential`, `CredentialTemplate`, `CatalogAttestation`, …) are written by hand from the Go structs at v3.10.1. Upstream publishes no schema for them. Every object type also accepts unknown keys, so fields added in later v3 releases still type-check. `decode` of OpenID4VCI offers, OpenID4VP requests and trusted lists returns a plain `JsonObject`.
 
 ## Contributing
 

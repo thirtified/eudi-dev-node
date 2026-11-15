@@ -394,3 +394,256 @@ export interface RegistrationExtensionResult extends Open {
   intendedUse?: string;
   registration: RegistrationCertificateResult | null;
 }
+
+// ── wallet ────────────────────────────────────────────────────────────────
+// internal/wallet: CredentialSummary and CredentialSummaryWithStatus
+// (wallet.go, wallet_status.go), credential_trust.go, credential_display.go,
+// credential_certificates.go, deferred.go, wallet.go (LogEntry).
+
+export type CredentialFormat = 'dc+sd-jwt' | 'mso_mdoc' | 'jwt_vc_json';
+
+/** Whether the wallet holds the credential's binding key. Only `this_wallet` can be presented. */
+export type HolderBinding = 'this_wallet' | 'other_key' | 'none';
+
+/** Revocation and expiry of the credential's certificate chain, from the wallet's own records (no CRL fetch). */
+export interface CertificateStatus extends Open {
+  status: 'valid' | 'revoked' | 'expired' | 'unchecked' | 'unknown' | 'none';
+  /** Common names of the revoked or expired certificates. */
+  problems?: string[];
+}
+
+/** The card display, with stored images replaced by wallet API paths. */
+export interface CredentialDisplay extends Open {
+  name?: string;
+  description?: string;
+  locale?: string;
+  background_color?: string;
+  text_color?: string;
+  logo_alt_text?: string;
+  logo_uri?: string;
+  background_uri?: string;
+}
+
+/** The credential's status list entry. `managed` is true when this wallet issued it and keeps its status. */
+export interface CredentialStatusInfo extends Open {
+  managed: boolean;
+  uri?: string;
+  idx?: number;
+  /** Set instead of `uri` and `idx` for a malformed status reference. */
+  error?: string;
+  /** With `managed`: the current value, 0 is valid. */
+  status?: number;
+  statusName?: string;
+}
+
+/** One credential as `wallet list` shows it, without claims and raw form. */
+export interface WalletCredentialSummary extends Open {
+  id: string;
+  format: CredentialFormat | (string & {});
+  claim_count: number;
+  vct?: string;
+  doctype?: string;
+  protected?: boolean;
+  /** Set for a batch, which the wallet lists once. */
+  batch?: boolean;
+  batch_size?: number;
+  display?: CredentialDisplay;
+  /** RFC 3339. */
+  valid_from?: string;
+  expires_at?: string;
+  issued_at?: string;
+  /** `iss` for SD-JWT and JWT, the signer's common name (`cert`) for mdoc, or a `did`. */
+  issuer?: { kind: 'iss' | 'cert' | 'did' | (string & {}); value: string };
+  issuer_name?: string;
+  /** Whether the signature verifies against the embedded key. That doesn't mean the issuer is trusted. */
+  signature?: { algorithm: string; self_consistent: boolean };
+  can_renew?: boolean;
+  issuer_key_did?: string;
+  status?: CredentialStatusInfo;
+  certificate_status: CertificateStatus;
+  holder_binding: HolderBinding;
+  key_binding_not_held?: boolean;
+}
+
+/** A stored credential with its claims and raw form: `wallet show`, `wallet import`. */
+export interface WalletCredential extends WalletCredentialSummary {
+  claims: JsonObject;
+  /** The credential as stored: SD-JWT / JWT compact form, or base64url mdoc. */
+  raw: string;
+}
+
+/** A credential the issuer deferred (OpenID4VCI deferred issuance). */
+export interface DeferredIssuance extends Open {
+  id: string;
+  transaction_id: string;
+  issuer: string;
+  credential_configuration_id: string;
+  format: string;
+  vct: string;
+  doctype: string;
+  display: unknown;
+  can_refresh: boolean;
+  /** Go duration, such as `5s`. */
+  interval: string;
+  created_at: string;
+  next_attempt_at: string;
+  attempts: number;
+  last_error: string;
+  issuer_name?: string;
+}
+
+/** `wallet list`. */
+export interface WalletCredentialList extends Open {
+  credentials: WalletCredentialSummary[];
+  /** Credentials on their way from an issuer. */
+  deferred?: DeferredIssuance[];
+}
+
+/** `wallet info`: the wallet's configuration. */
+export interface WalletInfo extends Open {
+  wallet_dir: string;
+  storage: string;
+  templates_dir: string;
+  credential_count: number;
+  validation_mode: 'debug' | 'strict' | (string & {});
+  base_url: string;
+  issuer_url: string;
+  status_list_url: string;
+  remote_url: string;
+  auto_accept: boolean;
+  require_haip: boolean;
+  require_arf: boolean;
+  seeded_keys: boolean;
+  vci_version: string;
+}
+
+/** One entry of the wallet's activity log. */
+export interface WalletLogEntry extends Open {
+  /** RFC 3339. */
+  time: string;
+  action: string;
+  detail: string;
+  success: boolean;
+  /** `warning` for a violation that didn't fail the action. */
+  severity?: string;
+  details?: JsonObject;
+}
+
+// ── templates ─────────────────────────────────────────────────────────────
+// internal/credtemplate (Template, TemplateDisplay), internal/wallet
+// (TransactionTemplateFileEntry), cmd/templates.go, cmd/templates_transactions.go.
+
+export interface CredentialTemplateDisplay extends Open {
+  name?: string | undefined;
+  description?: string | undefined;
+  background_color?: string | undefined;
+  text_color?: string | undefined;
+  logo?: string | undefined;
+  logo_alt_text?: string | undefined;
+  background_image?: string | undefined;
+  /** Claim labels by claim path. */
+  claims?: Record<string, string> | undefined;
+}
+
+/** A credential template: `templates show` and `templates list`, and the input of `templates import`. */
+export interface CredentialTemplate extends Open {
+  name?: string | undefined;
+  description?: string | undefined;
+  /** `sdjwt`, `jwt` or `mdoc`. Empty: any. */
+  format?: 'sdjwt' | 'jwt' | 'mdoc' | (string & {}) | undefined;
+  vct?: string | undefined;
+  doctype?: string | undefined;
+  namespace?: string | undefined;
+  /** Default expiry, a Go duration such as `720h`. */
+  exp?: string | undefined;
+  claims: JsonObject;
+  always_disclosed?: string[] | undefined;
+  category?: string | undefined;
+  unique_claims?: string[] | undefined;
+  rulebook?: string | undefined;
+  baseline?: boolean | undefined;
+  display?: CredentialTemplateDisplay | undefined;
+  /** Catalogue entry added with the template. */
+  catalog?: unknown;
+  /** Set on output for the templates built into eudi-dev. */
+  predefined?: boolean | undefined;
+  /** Set on output for templates from `wallet serve --templates` files. */
+  configured?: boolean | undefined;
+}
+
+/** A saved or imported credential template. */
+export interface SavedTemplate extends Open {
+  name: string;
+  /** The file it was written to. */
+  path: string;
+}
+
+/** A transaction data entry (OpenID4VP 1.0 §5.1). Its members depend on `type`. */
+export interface TransactionData extends Open {
+  type: string;
+  credential_ids?: string[] | undefined;
+  transaction_data_hashes_alg?: string[] | undefined;
+}
+
+/** A transaction template: `templates transactions show`, and the input of `templates transactions import`. */
+export interface TransactionTemplate extends Open {
+  name: string;
+  description?: string | undefined;
+  transaction_data: TransactionData;
+  predefined?: boolean | undefined;
+}
+
+export interface TransactionTypeField extends Open {
+  name: string;
+  /** JSON type, such as `string` or `object`. */
+  type: string;
+  required?: boolean;
+}
+
+/** `templates transactions types`: the transaction data types the wallet knows. */
+export interface TransactionTypes extends Open {
+  types: { type: string; ts12: boolean; fields: TransactionTypeField[] }[];
+  hash_algs: string[];
+}
+
+// ── catalog ───────────────────────────────────────────────────────────────
+// internal/registrar/catalog.go (CatalogAttestation, AttestationSchema).
+
+export interface CatalogCredential extends Open {
+  format: string;
+  type: string;
+  /** Claim paths. */
+  claims?: (string | number | null)[][];
+}
+
+export interface CatalogTrustAuthority extends Open {
+  /** `aki`, `etsi_tl` or `openid_federation`. */
+  frameworkType: string;
+  value: string;
+  isLOTE?: boolean;
+}
+
+/** An attestation type in the wallet's catalogue of attestations (EC TS11). */
+export interface CatalogAttestation extends Open {
+  name: string;
+  credentials: CatalogCredential[];
+  schema: {
+    /** The id `catalog.remove()` takes. */
+    id?: string;
+    version: string;
+    rulebookURI: string;
+    trustedAuthorities?: CatalogTrustAuthority[];
+    /** Such as `iso_18045_high`. */
+    attestationLoS: string;
+    bindingType: string;
+    supportedFormats: string[];
+    schemaURIs: { formatIdentifier: string; uri: string }[];
+  } & Open;
+  category?: string;
+  credentialIssuer?: string;
+  /** The entry belongs to a credential template. */
+  template?: boolean;
+  /** The entry comes from a `wallet serve --catalog` file. */
+  operator?: boolean;
+  removed?: boolean;
+}

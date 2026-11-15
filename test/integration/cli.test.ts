@@ -6,9 +6,12 @@
 // (@thirtified/eudi-dev-<os>-<cpu>). Each suite gets its own EUDI_DEV_HOME.
 
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 
-import { type DecodedSdJwt, EudiDev, EudiDevError, isDecodedCredential, SUPPORTED_MAJOR } from '../../src/index.js';
+import { type DecodedSdJwt, EudiDev, EudiDevError, isDecodedCredential, isDeferredIssuance, SUPPORTED_MAJOR } from '../../src/index.js';
 
 const TIMEOUT = 120_000;
 
@@ -174,3 +177,168 @@ describe('wallet, trust and registrar (local state)', { timeout: TIMEOUT }, () =
     assert.deepEqual(await eudi.registrar.verifiers.remove(identifier), { removed: identifier });
   });
 });
+
+describe('wallet store, templates and catalog (local state)', { timeout: TIMEOUT }, () => {
+  let eudi: EudiDev;
+  before(async () => {
+    eudi = await EudiDev.create();
+  });
+  after(async () => {
+    await eudi?.dispose();
+  });
+
+  it('keeps issued and imported credentials between calls', async () => {
+    const issued = await eudi.issue.sdjwt({ pid: true, wallet: true });
+    assert.ok(issued.id);
+    const mdoc = await eudi.issue.mdoc({ pid: true, wallet: true });
+    assert.ok(mdoc.id);
+    const { credential } = await eudi.issue.sdjwt({ vct: 'urn:example:card', claims: { given_name: 'Erika' } });
+    const imported = await eudi.wallet.import(credential);
+    assert.equal(imported.format, 'dc+sd-jwt');
+    assert.equal(imported.vct, 'urn:example:card');
+    assert.equal(imported.raw, credential);
+    assert.equal(imported.claims.given_name, 'Erika');
+
+    const { credentials } = await eudi.wallet.list();
+    const ids = credentials.map((c) => c.id);
+    for (const id of [issued.id, mdoc.id, imported.id]) assert.ok(ids.includes(id), `${id} is listed`);
+    const listedMdoc = credentials.find((c) => c.id === mdoc.id);
+    assert.equal(listedMdoc?.format, 'mso_mdoc');
+    assert.equal(listedMdoc?.doctype, 'eu.europa.ec.eudi.pid.1');
+    assert.equal(listedMdoc?.holder_binding, 'this_wallet');
+    assert.ok(listedMdoc?.certificate_status.status);
+    assert.ok(!('raw' in (listedMdoc ?? {})), 'a listing has no raw credential');
+
+    const shown = await eudi.wallet.show(issued.id);
+    assert.ok(!isDeferredIssuance(shown));
+    assert.equal(shown.raw, issued.credential);
+    assert.equal(shown.claim_count > 0, true);
+    assert.equal(shown.status?.managed, true, 'the wallet keeps the status of what it issued');
+
+    const decoded = await eudi.wallet.showDecoded(issued.id);
+    assert.equal(decoded.format, 'dc+sd-jwt');
+    assert.ok(!('validation' in decoded));
+  });
+
+  it('removes credentials and rejects unknown ids', async () => {
+    const { credential } = await eudi.issue.sdjwt({ vct: 'urn:example:gone' });
+    const { id } = await eudi.wallet.import({ path: await writeTemp('gone.txt', credential) });
+    assert.deepEqual(await eudi.wallet.remove(id), { removed: 1, id });
+    await assert.rejects(eudi.wallet.remove(id), (err: unknown) => err instanceof EudiDevError && /not found/.test(err.message));
+    await assert.rejects(eudi.wallet.import({ url: 'https://example.com/x' } as never), TypeError);
+
+    const all = await eudi.wallet.removeAll();
+    assert.equal(typeof all.removed, 'number');
+    assert.equal(typeof all.kept_protected, 'number');
+    assert.deepEqual((await eudi.wallet.list()).credentials, []);
+  });
+
+  it('reports its configuration, TLS certificate and activity log', async () => {
+    const info = await eudi.wallet.info();
+    assert.ok(info.wallet_dir.startsWith(eudi.home));
+    assert.equal(info.storage, 'file');
+    assert.match(await eudi.wallet.tlsCert(), /-----BEGIN CERTIFICATE-----/);
+    assert.ok((await eudi.wallet.tlsJwks({ port: 9000 })).keys.length >= 1);
+
+    const logs = await eudi.wallet.logs();
+    assert.ok(logs.length > 0, 'the earlier tests left log entries');
+    assert.equal(typeof logs[0]?.success, 'boolean');
+    assert.deepEqual(await eudi.wallet.clearLogs(), { cleared: true });
+    assert.deepEqual(await eudi.wallet.logs(), []);
+  });
+
+  it('saves, imports, shows and deletes credential templates', async () => {
+    const predefined = await eudi.templates.list();
+    assert.ok(predefined.some((t) => t.predefined));
+
+    const saved = await eudi.templates.save('card', {
+      format: 'sdjwt',
+      vct: 'urn:example:card:1',
+      claims: { given_name: 'Erika', level: 3 },
+      description: 'A test card',
+    });
+    assert.equal(saved.name, 'card');
+    assert.ok(saved.path.startsWith(eudi.home));
+    const shown = await eudi.templates.show('card');
+    assert.equal(shown.vct, 'urn:example:card:1');
+    assert.deepEqual(shown.claims, { given_name: 'Erika', level: 3 });
+
+    const copy = await eudi.templates.save('card-copy', { from: 'card', description: 'Copied' });
+    assert.equal(copy.name, 'card-copy');
+    assert.equal((await eudi.templates.show('card-copy')).vct, 'urn:example:card:1');
+
+    const imported = await eudi.templates.import([
+      { name: 'a', vct: 'urn:example:a', claims: { x: 1 } },
+      { name: 'b', vct: 'urn:example:b', claims: { y: 2 } },
+    ]);
+    assert.deepEqual(
+      imported.map((t) => t.name),
+      ['a', 'b'],
+    );
+    assert.deepEqual(
+      (await eudi.templates.import({ vct: 'urn:example:c', claims: { z: 3 } }, { name: 'c' })).map((t) => t.name),
+      ['c'],
+    );
+
+    // A saved template issues like a predefined one.
+    const { credential } = await eudi.issue.sdjwt({ template: 'card' });
+    const doc = (await eudi.decode(credential)) as DecodedSdJwt;
+    assert.equal(doc.resolvedClaims.given_name, 'Erika');
+
+    for (const name of ['card', 'card-copy', 'a', 'b', 'c']) assert.deepEqual(await eudi.templates.delete(name), { deleted: name });
+    await assert.rejects(eudi.templates.show('card'), EudiDevError);
+  });
+
+  it('manages transaction templates and lists the transaction types', async () => {
+    const list = await eudi.templates.transactions.list();
+    const first = list[0];
+    assert.ok(first, 'predefined transaction templates exist');
+    assert.equal(typeof first.transaction_data.type, 'string');
+    const shown = await eudi.templates.transactions.show(first.name);
+    assert.deepEqual(shown.transaction_data, first.transaction_data);
+
+    assert.deepEqual(await eudi.templates.transactions.import({ ...shown, name: 'mine', predefined: undefined }), [{ name: 'mine' }]);
+    assert.equal((await eudi.templates.transactions.show('mine')).transaction_data.type, first.transaction_data.type);
+    assert.deepEqual(await eudi.templates.transactions.delete('mine'), { deleted: 'mine' });
+
+    const { types, hash_algs } = await eudi.templates.transactions.types();
+    assert.ok(types.some((t) => t.ts12 && t.fields.some((f) => f.required)));
+    assert.ok(hash_algs.length > 0);
+  });
+
+  it('adds and removes catalogue entries', async () => {
+    const entries = await eudi.catalog.list();
+    assert.ok(
+      entries.some((e) => e.template),
+      'predefined templates are in the catalogue',
+    );
+
+    const added = await eudi.catalog.add({
+      name: 'Diploma',
+      types: ['dc+sd-jwt:urn:example:diploma:1'],
+      claims: ['dc+sd-jwt:degree'],
+      los: 'moderate',
+    });
+    assert.equal(added.name, 'Diploma');
+    assert.deepEqual(added.credentials[0]?.claims, [['degree']]);
+    assert.equal(added.schema.attestationLoS, 'iso_18045_moderate');
+    const id = added.schema.id;
+    assert.ok(id);
+    assert.ok((await eudi.catalog.list()).some((e) => e.schema.id === id));
+    assert.deepEqual(await eudi.catalog.remove(id), { removed: id });
+    assert.ok(!(await eudi.catalog.list()).some((e) => e.schema.id === id));
+  });
+});
+
+const tempDirs: string[] = [];
+after(async () => {
+  for (const dir of tempDirs) await rm(dir, { recursive: true, force: true });
+});
+
+async function writeTemp(name: string, content: string): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), 'eudi-int-'));
+  tempDirs.push(dir);
+  const path = join(dir, name);
+  await writeFile(path, content);
+  return path;
+}

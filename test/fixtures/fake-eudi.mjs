@@ -149,6 +149,56 @@ switch (positional[0]) {
     setTimeout(() => out({ slept: true }), 5000);
     break;
 
+  case 'wallet': {
+    const id = positional.at(-1);
+    const summary = { id: 'cred-1', format: 'dc+sd-jwt', claim_count: 1, certificate_status: { status: 'none' }, holder_binding: 'none' };
+    if (positional[1] === 'import') out({ ...summary, claims: { given_name: 'Erika' }, raw: stdin || 'raw' });
+    else if (positional[1] === 'list') out({ credentials: [summary] });
+    else if (positional[1] === 'show' && id === 'deferred-1') {
+      out({ id, transaction_id: 'tx-1', issuer: 'https://issuer.example', format: 'dc+sd-jwt', attempts: 0 });
+    } else if (positional[1] === 'show') {
+      out(
+        argv.includes('--decoded')
+          ? { format: 'dc+sd-jwt', header: {}, payload: {}, disclosures: [], resolvedClaims: {} }
+          : { ...summary, claims: {}, raw: 'raw' },
+      );
+    } else if (positional[1] === 'remove') {
+      if (id === 'missing') {
+        process.stderr.write('credential not found\n');
+        process.exit(1);
+      }
+      out(argv.includes('--all') ? { removed: 2, kept_protected: 0 } : { removed: 1, id });
+    } else if (positional[1] === 'tls-cert') {
+      out(argv.includes('--jwks') ? { keys: [{ kty: 'EC' }] } : { pem: '-----BEGIN CERTIFICATE-----\nMII\n-----END CERTIFICATE-----\n' });
+    } else if (positional[1] === 'logs') out(positional[2] === 'clean' ? { cleared: true } : []);
+    else out({ wallet_dir: `${process.env.EUDI_DEV_HOME}/wallet`, storage: 'file' });
+    break;
+  }
+
+  case 'templates': {
+    const tx = positional[1] === 'transactions';
+    const sub = tx ? positional[2] : positional[1];
+    const name = positional.at(-1);
+    if (sub === 'list') out([]);
+    else if (sub === 'types') out({ types: [], hash_algs: ['sha-256'] });
+    else if (sub === 'delete') out({ deleted: name });
+    else if (sub === 'import') {
+      // Like upstream: one object for one template, an array for several.
+      const text = stdin.trim();
+      const input = text.startsWith('[') ? JSON.parse(text) : text.startsWith('{') ? [JSON.parse(text)] : [{}];
+      const results = input.map((t, i) => ({ name: t.name ?? argv.find((a) => a.startsWith('--name='))?.slice(7) ?? `t${i}` }));
+      out(results.length === 1 ? results[0] : results);
+    } else if (sub === 'save') out({ name, path: `/templates/${name}.json` });
+    else out({ name, claims: {} });
+    break;
+  }
+
+  case 'catalog':
+    if (positional[1] === 'list') out([]);
+    else if (positional[1] === 'rm') out({ removed: positional.at(-1) });
+    else out({ name: 'x', credentials: [], schema: { id: 'cat-1' } });
+    break;
+
   case 'echo':
     out({ argv, stdin, json });
     break;

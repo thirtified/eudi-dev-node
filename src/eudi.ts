@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { type ResolveBinaryOptions, resolveBinary } from './binary.js';
+import { CatalogCommands } from './commands/catalog.js';
 import {
   type CallOptions,
   type DecodeOptions,
@@ -21,7 +22,9 @@ import {
   version,
 } from './commands/credentials.js';
 import { RegistrarCommands } from './commands/registrar.js';
+import { TemplateCommands } from './commands/templates.js';
 import { TrustCommands } from './commands/trust.js';
+import { WalletCommands } from './commands/wallet.js';
 import { EudiDevBinaryError } from './errors.js';
 import type { Input } from './input.js';
 import { Runner, type RunOptions, type RunResult } from './runner.js';
@@ -70,6 +73,12 @@ export class EudiDev implements AsyncDisposable {
   };
   readonly trust: TrustCommands;
   readonly registrar: RegistrarCommands;
+  /** The local wallet store: import, list, show and remove credentials. */
+  readonly wallet: WalletCommands;
+  /** Credential and transaction templates. */
+  readonly templates: TemplateCommands;
+  /** The catalogue of attestation types. */
+  readonly catalog: CatalogCommands;
 
   private readonly runner: Runner;
   private readonly ownsHome: boolean;
@@ -88,6 +97,9 @@ export class EudiDev implements AsyncDisposable {
     };
     this.trust = new TrustCommands(runner);
     this.registrar = new RegistrarCommands(runner);
+    this.wallet = new WalletCommands(runner);
+    this.templates = new TemplateCommands(runner);
+    this.catalog = new CatalogCommands(runner);
   }
 
   /** Resolves the binary, checks its version and sets up the home directory. */

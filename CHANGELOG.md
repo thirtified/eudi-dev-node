@@ -6,6 +6,14 @@ All notable changes to `@thirtified/eudi-dev` are documented here. The format fo
 
 ## [Unreleased]
 
+### Added
+
+- `eudi.wallet`: the local wallet store. `import()`, `list()`, `show()` (with `isDeferredIssuance()` for the id of a deferred credential), `showDecoded()`, `remove()`, `removeAll()`, `info()`, `tlsCert()`, `tlsJwks()`, `logs()` and `clearLogs()`.
+- `eudi.templates`: credential templates (`list()`, `show()`, `save()`, `import()`, `delete()`) and, under `templates.transactions`, transaction templates and their types.
+- `eudi.catalog`: the catalogue of attestation types (`list()`, `add()`, `remove()`).
+- Result types for these commands, such as `WalletCredential`, `WalletCredentialList`, `CredentialTemplate`, `TransactionTemplate` and `CatalogAttestation`.
+- README: which upstream commands the wrapper doesn't wrap, and why.
+
 ## [0.1.2]
 
 ### Fixed
